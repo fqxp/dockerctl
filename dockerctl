@@ -17,8 +17,6 @@ where COMMAND is one of:
     restart     restart container(s)
     status      show status of container(s)
     help        show this help message
-
-
     """ % sys.argv[0]
 
 if __name__ == '__main__':
@@ -32,7 +30,6 @@ if __name__ == '__main__':
         print
         print_help()
         sys.exit(1)
-
 
     container_names = sys.argv[2:]
     if len(container_names) == 0:
