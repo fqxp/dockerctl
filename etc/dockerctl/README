@@ -1,0 +1,23 @@
+Add a *.conf file for every container to be defined.
+
+Example:
+
+{
+  "image": "apache2",
+  "volumes": [
+    {
+      "host_dir": "/space/apache2-www",
+      "container_dir": "/var/lib/www"
+    },
+    {
+      "host_dir": "/space/apache2-log",
+      "container_dir": "/var/log/apache2"
+    }
+  ],
+  "ports": [
+    {
+      "host_port": 8080,
+      "container_port": 80
+    }
+  ]
+}
