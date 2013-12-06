@@ -50,25 +50,18 @@ To stop a container, use:
 
 Example configuration file for the above webserver example:
 
-    {
-    "image": "apache2",
-    "volumes": [
-        {
-        "host_dir": "/srv/webserver/www",
-        "container_dir": "/var/www"
-        },
-        {
-        "host_dir": "/srv/webserver/log",
-        "container_dir": "/var/log/apache2"
-        }
-    ],
-    "ports": [
-        {
-        "host_port": 8080,
-        "container_port": 80
-        }
-    ]
-    }
+    image: apache2
+    ports:
+    -
+        container_port: 80
+        host_port: 8080
+    volumes:
+    -
+        container_dir: /var/www
+        host_dir: /srv/webserver/www
+    -
+        container_dir: /var/log/apache2
+        host_dir: /srv/webserver/log
 
 ## Building a Debian package
 

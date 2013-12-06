@@ -2,6 +2,7 @@
 
 import datetime
 import json
+import yaml
 import os
 import os.path
 import re
@@ -78,7 +79,7 @@ class Container(object):
     def read_config(self):
         config_filename = '%s/%s.conf' % (self. DOCKER_CONTAINER_DIR, self.name)
         with open(config_filename) as fd:
-            return json.load(fd)
+            return yaml.load(fd)
 
     def read_runtime_id(self):
         id_filename = self.runtime_id_filename()

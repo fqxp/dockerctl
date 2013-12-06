@@ -16,6 +16,6 @@ setup(name='dockerctl',
       scripts=['bin/dockerctl'],
       description='A tool for managing docker containers using per-container config files',
       data_files=[
-          ('/usr/share/doc/dockerctl', ['README.md']),
+          ('/usr/share/doc/dockerctl', ['README.md', 'doc/example.yml']),
           ('/etc/dockerctl', ['etc/dockerctl/README']),
       ])
