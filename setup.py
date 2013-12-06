@@ -3,8 +3,13 @@
 from distutils.core import setup
 import os
 
+version_w = open('VERSION').read().strip()
+version = '0.1'
+
+print 'TRUE' if version_w==version else 'FALEA'
+
 setup(name='dockerctl',
-      version='0.1',
+      version=version,
       author='Frank Ploss',
       author_email='frank@fqxp.de',
       py_modules=['dockerctl'],
