@@ -1,17 +1,36 @@
 #! /usr/bin/env python
+# vi: ft=python fileencoding=utf-8
 
 from dockerctl import Container, ContainerException
 import sys
 
 
+def print_help():
+    print """\
+USAGE: %s COMMAND [CONTAINER ...]
+
+A manager for docker containers.
+
+where COMMAND is one of:
+    start       start container(s)
+    stop        stop container(s)
+    restart     restart container(s)
+    status      show status of container(s)
+    help        show this help message
+
+
+    """ % sys.argv[0]
+
 if __name__ == '__main__':
-    cmd = sys.argv[1]
-    if cmd not in ('start', 'stop', 'restart', 'status'):
-        print 'Unknown command %s' % cmd
+    cmd = sys.argv[1] if len(sys.argv) > 1 else ''
+
+    if cmd == 'help':
+        print_help()
+        sys.exit(0)
+    elif cmd not in ('start', 'stop', 'restart', 'status'):
+        print 'Unknown command ’%s’' % cmd
         print
-        print 'Usage: %s CMD' % sys.argv[0]
-        print
-        print 'Where CMD is one of start, stop, restart, status'
+        print_help()
         sys.exit(1)
 
 
@@ -38,4 +57,3 @@ if __name__ == '__main__':
                 c.status()
         except ContainerException as e:
             print 'ERROR: %s' % e.message
-
