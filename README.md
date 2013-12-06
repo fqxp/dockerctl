@@ -85,4 +85,4 @@ in setup.cfg.
 
 After this, the package lies in `deb_dist` and you can install using `dpkg`:
 
-    dpkg -i deb_dist/mypackage_0.1-1_all.deb
+    dpkg -i deb_dist/dockerctl_0.1-1_all.deb

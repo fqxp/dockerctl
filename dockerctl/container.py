@@ -62,7 +62,7 @@ class ContainerException(Exception):
 
 class Container(object):
 
-    DOCKER_CONTAINER_DIR = '/etc/docker-containers'
+    DOCKER_CONTAINER_DIR = '/etc/dockerctl'
     DOCKER_RUN_DIR = '/var/run/dockerctl'
 
     @classmethod
