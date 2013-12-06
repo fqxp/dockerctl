@@ -187,48 +187,10 @@ Volumes:    %(volumes)s
             container.start()
 
     def _run_command(self, cmd_args, verbose=False):
-        if verbose: print '==> %s' % (' '.join(cmd_args))
-        try:
-            output = subprocess.check_output(cmd_args, stderr=subprocess.STDOUT)
-            if verbose: print '<== Success'
-            return output
-        except subprocess.CalledProcessError as e:
-            if verbose: print '<== Subprocess failed with %d' % e.returncode
-            print e.output
-            raise
-
-if __name__ == '__main__':
-    cmd = sys.argv[1]
-    if cmd not in ('start', 'stop', 'restart', 'status'):
-        print 'Unknown command %s' % cmd
-        print
-        print 'Usage: %s CMD' % sys.argv[0]
-        print
-        print 'Where CMD is one of start, stop, restart, status'
-        sys.exit(1)
-
-
-    container_names = sys.argv[2:]
-    if len(container_names) == 0:
-        container_names = Container.available()
-
-    for container_name in container_names:
-        c = Container(container_name)
-        try:
-            if cmd == 'start':
-                print 'Starting %s ...' % container_name,
-                c.start()
-                print 'done'
-            elif cmd == 'stop':
-                print 'Stopping %s ...' % container_name,
-                c.stop()
-                print 'done'
-            elif cmd == 'restart':
-                print 'Restarting %s ...' % container_name,
-                c.restart()
-                print 'done'
-            elif cmd == 'status':
-                c.status()
-        except ContainerException as e:
-            print 'ERROR: %s' % e.message
+        if verbose:
+            print 'Running ’%s’' % (' '.join(cmd_args))
+        output = subprocess.check_output(cmd_args, stderr=subprocess.STDOUT)
+        if verbose:
+            print 'Success.'
+        return output
 

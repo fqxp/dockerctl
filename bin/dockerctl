@@ -2,6 +2,7 @@
 # vi: ft=python fileencoding=utf-8
 
 from dockerctl.container import Container, ContainerException
+import subprocess
 import sys
 try:
     from dockerctl.version import version
@@ -60,3 +61,6 @@ if __name__ == '__main__':
                 c.status()
         except ContainerException as e:
             print 'ERROR: %s' % e.message
+        except subprocess.CalledProcessError as e:
+            print 'Subprocess %s failed with %d' % (e.cmd, e.returncode)
+            sys.exit(2)
