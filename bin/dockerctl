@@ -1,8 +1,12 @@
 #! /usr/bin/env python
 # vi: ft=python fileencoding=utf-8
 
-from dockerctl import Container, ContainerException
+from dockerctl.container import Container, ContainerException
 import sys
+try:
+    from dockerctl.version import version
+except ImportError:
+    version = 'DEV'
 
 
 def print_help():
@@ -17,7 +21,9 @@ where COMMAND is one of:
     restart     restart container(s)
     status      show status of container(s)
     help        show this help message
-    """ % sys.argv[0]
+
+This is dockerctl version %s. See https://github.com/fqxp/dockerfiles for source code.
+    """ % (sys.argv[0], version)
 
 if __name__ == '__main__':
     cmd = sys.argv[1] if len(sys.argv) > 1 else ''
