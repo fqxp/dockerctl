@@ -1,5 +1,6 @@
 #! /usr/bin/env python2.7
 
+import docker
 from dockerctl.utils import pretty_date, parse_datetime
 import datetime
 import json
@@ -29,6 +30,7 @@ class Container(object):
 
     def __init__(self, name):
         self.name = name
+        self.client = docker.Client()
 
     def read_config(self):
         config_filename = '%s/%s.conf' % (self. DOCKER_CONTAINER_DIR, self.name)
@@ -40,7 +42,7 @@ class Container(object):
         if not os.path.exists(id_filename):
             return None
         else:
-            return open(id_filename, 'r').read().strip()[:12]
+            return open(id_filename, 'r').read().strip()
 
     def write_runtime_id(self, container_id):
         if not os.path.exists(self.DOCKER_RUN_DIR):
@@ -55,16 +57,30 @@ class Container(object):
         if container_id is None:
             return False
 
-        running_ids = self._run_command(['docker', 'ps', '-q']).strip().split('\n')
+        running_ids = map(lambda container: container['Id'], self.client.containers(quiet=True))
 
-        return container_id[:12] in running_ids
+        return container_id in running_ids
 
     def status(self):
         if not self.is_running():
             print('Container %s is not running' % self.name)
         else:
-            container_id = self.read_runtime_id()[:12]
-            data = json.loads(self._run_command(['docker', 'inspect', container_id]))[0]
+            container_id = self.read_runtime_id()
+            data = self.client.inspect_container(container_id)
+            pretty_volumes = []
+            pretty_ports = []
+
+            if data['Volumes']:
+                pretty_volumes = [
+                    '%s -> %s %s' % (host_dir, container_dir, '' if data['VolumesRW'][host_dir] else '[read-only]')
+                    for host_dir, container_dir in data['Volumes'].iteritems()
+                ]
+            if data['NetworkSettings'] and data['NetworkSettings']['Ports']:
+                pretty_ports = [
+                    '%s:%s -> %s' % (port['HostIp'] if port['HostIp'] else '0.0.0.0', port['HostPort'], container_port)
+                    for container_port, ports in data['NetworkSettings']['Ports'].iteritems()
+                    for port in (ports if ports else [])
+                ]
 
             print '''CONTAINER:  %(container_name)s
 Id:         %(id)s
@@ -84,15 +100,8 @@ Volumes:    %(volumes)s
                 'created': pretty_date(parse_datetime(data['Created'])),
                 'started': pretty_date(parse_datetime(data['State']['StartedAt'])),
                 'ip_address': data['NetworkSettings']['IPAddress'],
-                'ports': '\n             '.join([
-                    '%s:%s -> %s' % (port['HostIp'], port['HostPort'], container_port)
-                    for container_port, ports in data['NetworkSettings']['Ports'].iteritems()
-                    for port in ports
-                ]),
-                'volumes': '\n            '.join([
-                    '%s -> %s %s' % (host_dir, container_dir, '' if data['VolumesRW'][host_dir] else '[read-only]')
-                    for host_dir, container_dir in data['Volumes'].iteritems()
-                ]),
+                'ports': '\n             '.join(pretty_ports),
+                'volumes': '\n            '.join(pretty_volumes),
             }
 
     def start(self):
@@ -101,23 +110,24 @@ Volumes:    %(volumes)s
             raise ContainerException('Cannot start container %s because it is already running with id %s' %
                             (self.name, container_id))
 
-        config = self.read_config()
-
         self.start_depends()
 
+        config = self.read_config()
         image = config['image']
-        args = ['docker', 'run', '-d']
 
+        volumes = dict()
         for volume in config.get('volumes', []):
-            args += ['-v', '%s:%s' % (volume['host_dir'], volume['container_dir'])]
+            volumes[volume['host_dir']] = volume['container_dir']
+
+        port_bindings = dict()
         for port_mapping in config.get('ports', []):
-            args += ['-p', '%d:%d' % (port_mapping['host_port'], port_mapping['container_port'])]
-        args += [image]
+            port_bindings[port_mapping['host_port']] = port_mapping['container_port']
 
-        container_id = self._run_command(args, verbose=True).strip()
-        self.write_runtime_id(container_id)
+        container = self.client.create_container(image, detach=True, ports=port_bindings.keys())
+        self.client.start(container, binds=volumes, port_bindings=port_bindings)
+        self.write_runtime_id(container['Id'])
 
-        return container_id
+        return container['Id']
 
     def stop(self):
 
@@ -125,7 +135,7 @@ Volumes:    %(volumes)s
             raise ContainerException('Cannot stop container %s because it is not running' % self.name)
 
         container_id = self.read_runtime_id()
-        self._run_command(['docker', 'stop', container_id])
+        self.client.stop(container_id)
 
         os.remove(self.runtime_id_filename())
 
@@ -139,12 +149,3 @@ Volumes:    %(volumes)s
         for container_name in config.get('depends_on', []):
             container = Container(container_name)
             container.start()
-
-    def _run_command(self, cmd_args, verbose=False):
-        if verbose:
-            print 'Running ’%s’' % (' '.join(cmd_args))
-        output = subprocess.check_output(cmd_args, stderr=subprocess.STDOUT)
-        if verbose:
-            print 'Success.'
-        return output
-
