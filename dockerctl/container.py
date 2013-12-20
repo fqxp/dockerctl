@@ -2,6 +2,7 @@
 
 import docker
 from dockerctl.utils import pretty_date, parse_datetime
+from dockerctl.name_generator import generate_name
 import datetime
 import json
 import yaml
@@ -19,7 +20,6 @@ class ContainerException(Exception):
 class Container(object):
 
     DOCKER_CONTAINER_DIR = '/etc/dockerctl'
-    DOCKER_RUN_DIR = '/var/run/dockerctl'
 
     @classmethod
     def available(cls):
@@ -38,35 +38,26 @@ class Container(object):
         with open(config_filename) as fd:
             return yaml.load(fd)
 
-    def read_runtime_id(self):
-        id_filename = self.runtime_id_filename()
-        if not os.path.exists(id_filename):
-            return None
-        else:
-            return open(id_filename, 'r').read().strip()
+    def get_runtime_id(self):
+        container = self.get_container_by_name(self.name)
 
-    def write_runtime_id(self, container_id):
-        if not os.path.exists(self.DOCKER_RUN_DIR):
-            os.makedirs(self.DOCKER_RUN_DIR)
-        open(self.runtime_id_filename(), 'w').write(container_id)
+        return container['Id'] if container else None
 
-    def runtime_id_filename(self):
-        return os.path.join(self.DOCKER_RUN_DIR, self.name)
+    def get_container_by_name(self, name):
+        containers = self.client.containers()
+        for container in containers:
+            if any(n.startswith('/%s/' % name) for n in container['Names']):
+                return container
+        return None
 
     def is_running(self):
-        container_id = self.read_runtime_id()
-        if container_id is None:
-            return False
-
-        running_ids = map(lambda container: container['Id'], self.client.containers(quiet=True))
-
-        return container_id in running_ids
+        return self.get_container_by_name(self.name) is not None
 
     def status(self):
         if not self.is_running():
             print('Container %s is not running' % self.name)
         else:
-            container_id = self.read_runtime_id()
+            container_id = self.get_runtime_id()
             data = self.client.inspect_container(container_id)
             pretty_volumes = []
             pretty_ports = []
@@ -107,7 +98,7 @@ Volumes:    %(volumes)s
 
     def start(self):
         if self.is_running():
-            container_id = self.read_runtime_id()
+            container_id = self.get_runtime_id()
             raise ContainerException('Cannot start container %s because it is already running with id %s' %
                             (self.name, container_id))
 
@@ -128,21 +119,18 @@ Volumes:    %(volumes)s
         for port_mapping in self.config.get('ports', []):
             port_bindings[port_mapping['host_port']] = port_mapping['container_port']
 
-        container = self.client.create_container(image, detach=True)
+        name = '%s/%s' % (self.name, generate_name())
+        container = self.client.create_container(image, detach=True, name=name)
         self.client.start(container, binds=volumes, port_bindings=port_bindings)
-        self.write_runtime_id(container['Id'])
 
         return container
 
     def stop(self):
-
         if not self.is_running():
             raise ContainerException('Cannot stop container %s because it is not running' % self.name)
 
-        container_id = self.read_runtime_id()
+        container_id = self.get_runtime_id()
         self.client.stop(container_id)
-
-        os.remove(self.runtime_id_filename())
 
     def restart(self):
         self.stop()
