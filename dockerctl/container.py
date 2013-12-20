@@ -46,7 +46,7 @@ class Container(object):
     def get_container_by_name(self, name):
         containers = self.client.containers()
         for container in containers:
-            if any(n.startswith('/%s/' % name) for n in container['Names']):
+            if any(n.startswith('/%s#' % name) for n in container['Names']):
                 return container
         return None
 
@@ -119,7 +119,7 @@ Volumes:    %(volumes)s
         for port_mapping in self.config.get('ports', []):
             port_bindings[port_mapping['host_port']] = port_mapping['container_port']
 
-        name = '%s/%s' % (self.name, generate_name())
+        name = '%s#%s' % (self.name, generate_name())
         container = self.client.create_container(image, detach=True, name=name)
         self.client.start(container, binds=volumes, port_bindings=port_bindings)
 
