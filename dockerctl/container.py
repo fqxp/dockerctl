@@ -113,21 +113,26 @@ Volumes:    %(volumes)s
 
         self.start_depends()
 
+        container = self.start_without_depends()
+
+        return container['Id']
+
+    def start_without_depends(self):
         image = self.config['image']
 
-        volumes = dict()
+        volumes = {}
         for volume in self.config.get('volumes', []):
             volumes[volume['host_dir']] = volume['container_dir']
 
-        port_bindings = dict()
+        port_bindings = {}
         for port_mapping in self.config.get('ports', []):
             port_bindings[port_mapping['host_port']] = port_mapping['container_port']
 
-        container = self.client.create_container(image, detach=True, ports=port_bindings.keys())
+        container = self.client.create_container(image, detach=True)
         self.client.start(container, binds=volumes, port_bindings=port_bindings)
         self.write_runtime_id(container['Id'])
 
-        return container['Id']
+        return container
 
     def stop(self):
 
