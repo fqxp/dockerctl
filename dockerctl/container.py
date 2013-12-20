@@ -31,6 +31,7 @@ class Container(object):
     def __init__(self, name):
         self.name = name
         self.client = docker.Client()
+        self.config = self.read_config()
 
     def read_config(self):
         config_filename = '%s/%s.conf' % (self. DOCKER_CONTAINER_DIR, self.name)
@@ -112,15 +113,14 @@ Volumes:    %(volumes)s
 
         self.start_depends()
 
-        config = self.read_config()
-        image = config['image']
+        image = self.config['image']
 
         volumes = dict()
-        for volume in config.get('volumes', []):
+        for volume in self.config.get('volumes', []):
             volumes[volume['host_dir']] = volume['container_dir']
 
         port_bindings = dict()
-        for port_mapping in config.get('ports', []):
+        for port_mapping in self.config.get('ports', []):
             port_bindings[port_mapping['host_port']] = port_mapping['container_port']
 
         container = self.client.create_container(image, detach=True, ports=port_bindings.keys())
@@ -144,8 +144,6 @@ Volumes:    %(volumes)s
         self.start()
 
     def start_depends(self):
-        config = self.read_config()
-
-        for container_name in config.get('depends_on', []):
+        for container_name in self.config.get('depends_on', []):
             container = Container(container_name)
             container.start()
