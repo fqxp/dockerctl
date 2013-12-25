@@ -46,8 +46,17 @@ class Container(object):
     def get_container_by_name(self, name):
         containers = self.client.containers()
         for container in containers:
-            if any(n.startswith('/%s#' % name) for n in container['Names']):
-                return container
+            for n in container['Names']:
+                if re.match(r'^/%s#[a-zA-Z_]+$' % name, n):
+                    return container
+        return None
+
+    def matching_name(self, name):
+        containers = self.client.containers()
+        for container in containers:
+            for n in container['Names']:
+                if re.match(r'^/%s#[a-zA-Z_]+$' % name, n):
+                    return n
         return None
 
     def is_running(self):
@@ -110,6 +119,9 @@ Volumes:    %(volumes)s
 
     def start_without_depends(self):
         image = self.config['image']
+        command = self.config.get('command')
+        name = '%s#%s' % (self.name, generate_name())
+        container = self.client.create_container(image, detach=True, command=command, name=name)
 
         volumes = {}
         for volume in self.config.get('volumes', []):
@@ -119,9 +131,18 @@ Volumes:    %(volumes)s
         for port_mapping in self.config.get('ports', []):
             port_bindings[port_mapping['host_port']] = port_mapping['container_port']
 
-        name = '%s#%s' % (self.name, generate_name())
-        container = self.client.create_container(image, detach=True, name=name)
-        self.client.start(container, binds=volumes, port_bindings=port_bindings)
+        links = {}
+        for path, alias in self.config.get('links', {}).iteritems():
+            path_name = self.matching_name(path)
+            if path_name:
+                links[path_name] = alias
+
+        import pprint
+        pprint.pprint(container)
+        pprint.pprint(volumes)
+        pprint.pprint(port_bindings)
+        pprint.pprint(links)
+        self.client.start(container, binds=volumes, port_bindings=port_bindings, links=links)
 
         return container
 
