@@ -30,13 +30,20 @@ class Container(object):
 
     def __init__(self, name):
         self.name = name
-        self.client = docker.Client()
-        self.config = self.read_config()
+        self._client = None
+        self._config = None
 
-    def read_config(self):
-        config_filename = '%s/%s.conf' % (self. DOCKER_CONTAINER_DIR, self.name)
-        with open(config_filename) as fd:
-            return yaml.load(fd)
+    def client(self):
+        if self._client is None:
+            self._client = docker.Client()
+        return self._client
+
+    def config(self):
+        if self._config is None:
+            config_filename = '%s/%s.conf' % (self. DOCKER_CONTAINER_DIR, self.name)
+            with open(config_filename) as fd:
+                self._config = yaml.load(fd)
+        return self._config
 
     def get_runtime_id(self):
         container = self.get_container_by_name(self.name)
@@ -44,7 +51,7 @@ class Container(object):
         return container['Id'] if container else None
 
     def get_container_by_name(self, name):
-        containers = self.client.containers()
+        containers = self.client().containers()
         for container in containers:
             for n in container['Names']:
                 if re.match(r'^/%s#[a-zA-Z_]+$' % name, n):
@@ -52,7 +59,7 @@ class Container(object):
         return None
 
     def matching_name(self, name):
-        containers = self.client.containers()
+        containers = self.client().containers()
         for container in containers:
             for n in container['Names']:
                 if re.match(r'^/%s#[a-zA-Z_]+$' % name, n):
@@ -67,7 +74,7 @@ class Container(object):
             print('Container %s is not running' % self.name)
         else:
             container_id = self.get_runtime_id()
-            data = self.client.inspect_container(container_id)
+            data = self.client().inspect_container(container_id)
             pretty_volumes = []
             pretty_ports = []
 
@@ -118,21 +125,21 @@ Volumes:    %(volumes)s
         return container['Id']
 
     def start_without_depends(self):
-        image = self.config['image']
-        command = self.config.get('command')
+        image = self.config()['image']
+        command = self.config().get('command')
         name = '%s#%s' % (self.name, generate_name())
-        container = self.client.create_container(image, detach=True, command=command, name=name)
+        container = self.client().create_container(image, detach=True, command=command, name=name)
 
         volumes = {}
-        for volume in self.config.get('volumes', []):
+        for volume in self.config().get('volumes', []):
             volumes[volume['host_dir']] = volume['container_dir']
 
         port_bindings = {}
-        for port_mapping in self.config.get('ports', []):
+        for port_mapping in self.config().get('ports', []):
             port_bindings[port_mapping['host_port']] = port_mapping['container_port']
 
         links = {}
-        for path, alias in self.config.get('links', {}).iteritems():
+        for path, alias in self.config().get('links', {}).iteritems():
             path_name = self.matching_name(path)
             if path_name:
                 links[path_name] = alias
@@ -142,7 +149,7 @@ Volumes:    %(volumes)s
         pprint.pprint(volumes)
         pprint.pprint(port_bindings)
         pprint.pprint(links)
-        self.client.start(container, binds=volumes, port_bindings=port_bindings, links=links)
+        self.client().start(container, binds=volumes, port_bindings=port_bindings, links=links)
 
         return container
 
@@ -151,13 +158,13 @@ Volumes:    %(volumes)s
             raise ContainerException('Cannot stop container %s because it is not running' % self.name)
 
         container_id = self.get_runtime_id()
-        self.client.stop(container_id)
+        self.client().stop(container_id)
 
     def restart(self):
         self.stop()
         self.start()
 
     def start_depends(self):
-        for container_name in self.config.get('depends_on', []):
+        for container_name in self.config().get('depends_on', []):
             container = Container(container_name)
             container.start()
