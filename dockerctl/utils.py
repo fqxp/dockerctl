@@ -8,11 +8,10 @@ def pretty_date(time=False):
     pretty string like 'an hour ago', 'Yesterday', '3 months ago',
     'just now', etc
     """
-    from datetime import datetime
-    now = datetime.utcnow()
+    now = datetime.datetime.utcnow()
     if type(time) is int:
         diff = now - datetime.fromtimestamp(time)
-    elif isinstance(time,datetime):
+    elif isinstance(time, datetime.datetime):
         diff = now - time
     elif not time:
         diff = now - now

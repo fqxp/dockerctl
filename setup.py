@@ -1,7 +1,6 @@
 #! /usr/bin/env python
 
 from distutils.core import setup
-import os
 
 version_w = open('VERSION').read().strip()
 version = '0.1'

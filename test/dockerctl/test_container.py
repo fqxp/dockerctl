@@ -1,6 +1,6 @@
 from dockerctl.container import *
 import unittest
-from mock import MagicMock, patch
+from mock import MagicMock
 
 
 class TestContainer(unittest.TestCase):
@@ -22,7 +22,7 @@ class TestContainer(unittest.TestCase):
 
         result = self.container.get_container_by_name('A')
 
-        self.assertIsNone(None)
+        self.assertIsNone(result)
 
     def test_get_container_by_name_choses_the_right_container(self):
         self.container.client.return_value.containers.return_value = [

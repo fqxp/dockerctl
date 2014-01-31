@@ -1,16 +1,10 @@
-#! /usr/bin/env python2.7
-
-import docker
-from dockerctl.utils import pretty_date, parse_datetime
 from dockerctl.name_generator import generate_name
-import datetime
-import json
-import yaml
+from dockerctl.utils import pretty_date, parse_datetime
+import docker
 import os
 import os.path
 import re
-import subprocess
-import sys
+import yaml
 
 
 class ContainerException(Exception):

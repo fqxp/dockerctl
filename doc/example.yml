@@ -1,4 +1,4 @@
-image: apache2
+image: fqxp/apache2
 ports:
   -
     container_port: 80
