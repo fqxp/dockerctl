@@ -51,23 +51,21 @@ class Container(object):
         return container['Id'] if container else None
 
     def get_container_by_name(self, name):
-        containers = self.client().containers()
-        for container in containers:
-            for n in container['Names']:
-                if re.match(r'^/%s#[a-zA-Z_]+$' % name, n):
-                    return container
-        return None
+        return self._get_container_and_name_by_name(name)[0]
 
     def matching_name(self, name):
+        return self._get_container_and_name_by_name(name)[1]
+
+    def is_running(self):
+        return self._get_container_and_name_by_name(self.name) is not None
+
+    def _get_container_and_name_by_name(self, name):
         containers = self.client().containers()
         for container in containers:
             for n in container['Names']:
-                if re.match(r'^/%s#[a-zA-Z_]+$' % name, n):
-                    return n
+                if re.match(r'^/%s-[a-zA-Z_]+$' % name, n):
+                    return container, n
         return None
-
-    def is_running(self):
-        return self.get_container_by_name(self.name) is not None
 
     def status(self):
         if not self.is_running():
@@ -112,7 +110,7 @@ Volumes:    %(volumes)s
                 'volumes': '\n            '.join(pretty_volumes),
             }
 
-    def start(self):
+    def start(self, cmd=None, interactive=False):
         if self.is_running():
             container_id = self.get_runtime_id()
             raise ContainerException('Cannot start container %s because it is already running with id %s' %
@@ -120,15 +118,21 @@ Volumes:    %(volumes)s
 
         self.start_depends()
 
-        container = self.start_without_depends()
+        container = self.start_without_depends(cmd, interactive=interactive)
 
         return container['Id']
 
-    def start_without_depends(self):
+    def start_without_depends(self, cmd=None, interactive=False):
         image = self.config()['image']
-        command = self.config().get('command')
-        name = '%s#%s' % (self.name, generate_name())
-        container = self.client().create_container(image, detach=True, command=command, name=name)
+        command = cmd or self.config().get('command')
+        name = '%s-%s' % (self.name, generate_name())
+        container = self.client().create_container(
+            image,
+            detach=not interactive,
+            stdin_open=interactive,
+            tty=interactive,
+            command=command,
+            name=name)
 
         volumes = {}
         for volume in self.config().get('volumes', []):
@@ -136,7 +140,7 @@ Volumes:    %(volumes)s
 
         port_bindings = {}
         for port_mapping in self.config().get('ports', []):
-            port_bindings[port_mapping['host_port']] = port_mapping['container_port']
+            port_bindings[port_mapping['container_port']] = port_mapping['host_port']
 
         links = {}
         for path, alias in self.config().get('links', {}).iteritems():
@@ -167,4 +171,5 @@ Volumes:    %(volumes)s
     def start_depends(self):
         for container_name in self.config().get('depends_on', []):
             container = Container(container_name)
-            container.start()
+            if not container.is_running():
+                container.start()
