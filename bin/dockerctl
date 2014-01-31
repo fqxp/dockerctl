@@ -21,6 +21,7 @@ where COMMAND is one of:
     stop        stop container(s)
     restart     restart container(s)
     status      show status of container(s)
+    shell       start a shell in the container
     help        show this help message
 
 This is dockerctl version %s. See https://github.com/fqxp/dockerfiles for source code.
@@ -32,35 +33,42 @@ if __name__ == '__main__':
     if cmd == 'help':
         print_help()
         sys.exit(0)
-    elif cmd not in ('start', 'stop', 'restart', 'status'):
+    elif cmd not in ('start', 'stop', 'restart', 'run', 'status'):
         print 'Unknown command ’%s’' % cmd
         print
         print_help()
         sys.exit(1)
 
-    container_names = sys.argv[2:]
-    if len(container_names) == 0:
-        container_names = Container.available()
-
-    for container_name in container_names:
-        c = Container(container_name)
-        try:
-            if cmd == 'start':
+    try:
+        if cmd == 'start':
+            for container_name in sys.argv[2:] or Container.available():
                 print 'Starting %s ...' % container_name,
+                c = Container(container_name)
                 c.start()
                 print 'done'
-            elif cmd == 'stop':
+        elif cmd == 'stop':
+            for container_name in sys.argv[2:] or Container.available():
+                c = Container(container_name)
                 print 'Stopping %s ...' % container_name,
                 c.stop()
                 print 'done'
-            elif cmd == 'restart':
+        elif cmd == 'restart':
+            for container_name in sys.argv[2:] or Container.available():
+                c = Container(container_name)
                 print 'Restarting %s ...' % container_name,
                 c.restart()
                 print 'done'
-            elif cmd == 'status':
+        elif cmd == 'run':
+            container_name = sys.argv[2]
+            cmd = sys.argv[3:] or ['/bin/bash']
+            c = Container(container_name)
+            c.start(cmd, interactive=True)
+        elif cmd == 'status':
+            for container_name in sys.argv[2:] or Container.available():
+                c = Container(container_name)
                 c.status()
-        except ContainerException as e:
-            print 'ERROR: %s' % e.message
-        except subprocess.CalledProcessError as e:
-            print 'Subprocess %s failed with %d' % (e.cmd, e.returncode)
-            sys.exit(2)
+    except ContainerException as e:
+        print 'ERROR: %s' % e.message
+    except subprocess.CalledProcessError as e:
+        print 'Subprocess %s failed with %d' % (e.cmd, e.returncode)
+        sys.exit(2)
