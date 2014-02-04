@@ -100,7 +100,7 @@ Volumes:    %(volumes)s
                 'created': pretty_date(parse_datetime(data['Created'])),
                 'started': pretty_date(parse_datetime(data['State']['StartedAt'])),
                 'ip_address': data['NetworkSettings']['IPAddress'],
-                'ports': '\n             '.join(pretty_ports),
+                'ports': '\n            '.join(pretty_ports),
                 'volumes': '\n            '.join(pretty_volumes),
             }
 
@@ -119,14 +119,8 @@ Volumes:    %(volumes)s
     def start_without_depends(self, cmd=None, interactive=False):
         image = self.config()['image']
         command = cmd or self.config().get('command')
+        environment = self.config().get('environment', {})
         name = '%s-%s' % (self.name, generate_name())
-        container = self.client().create_container(
-            image,
-            detach=not interactive,
-            stdin_open=interactive,
-            tty=interactive,
-            command=command,
-            name=name)
 
         volumes = {}
         for volume in self.config().get('volumes', []):
@@ -142,6 +136,15 @@ Volumes:    %(volumes)s
             if path_name:
                 links[path_name] = alias
 
+        container = self.client().create_container(
+            image,
+            detach=not interactive,
+            stdin_open=interactive,
+            tty=interactive,
+            command=command,
+            volumes=volumes.values(),
+            environment=environment,
+            name=name)
         import pprint
         pprint.pprint(container)
         pprint.pprint(volumes)
