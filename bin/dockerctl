@@ -44,8 +44,8 @@ if __name__ == '__main__':
             for container_name in sys.argv[2:] or Container.available():
                 print 'Starting %s ...' % container_name,
                 c = Container(container_name)
-                c.start()
-                print 'done'
+                container_id = c.start()
+                print 'done [%s]' % container_id
         elif cmd == 'stop':
             for container_name in sys.argv[2:] or Container.available():
                 c = Container(container_name)
