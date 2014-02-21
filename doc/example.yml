@@ -10,3 +10,7 @@ volumes:
   -
     container_dir: /var/log/apache2
     host_dir: /srv/webserver/log
+links:
+  # the key is the name of a container, the value is the alias under which
+  # the container‘s link will be known
+  mongodb: 'mongodb'
