@@ -13,79 +13,17 @@ class Container(object):
 
     DOCKER_CONTAINER_DIR = '/etc/dockerctl'
 
+    def __init__(self, name):
+        self.name = name
+        self._client = None
+        self._config = None
+
     @classmethod
     def available(cls):
         conf_files = filter(lambda fn: fn.endswith('.conf'), os.listdir(cls.DOCKER_CONTAINER_DIR))
         names = map(lambda fn: fn[:-5], conf_files)
 
         return names
-
-    def __init__(self, name):
-        self.name = name
-        self._client = None
-        self._config = None
-
-    def client(self):
-        self._client = self._client or docker.Client()
-        return self._client
-
-    def config(self):
-        if self._config is None:
-            config_filename = '%s/%s.conf' % (self. DOCKER_CONTAINER_DIR, self.name)
-            with open(config_filename) as fd:
-                self._config = yaml.load(fd)
-        return self._config
-
-    def get_runtime_id(self):
-        container = self.get_running_container_by_image_name(self.name)
-
-        return container['Id'] if container else None
-
-    def is_running(self):
-        return self.get_running_container_by_image_name(self.name) is not None
-
-    def status(self):
-        if not self.is_running():
-            print('Container %s is not running' % self.name)
-        else:
-            container_id = self.get_runtime_id()
-            data = self.client().inspect_container(container_id)
-            pretty_volumes = []
-            pretty_ports = []
-
-            if data['Volumes']:
-                pretty_volumes = [
-                    '%s -> %s %s' % (host_dir, container_dir, '' if data['VolumesRW'][host_dir] else '[read-only]')
-                    for host_dir, container_dir in data['Volumes'].iteritems()
-                ]
-            if data['NetworkSettings'] and data['NetworkSettings']['Ports']:
-                pretty_ports = [
-                    '%s:%s -> %s' % (port['HostIp'] if port['HostIp'] else '0.0.0.0', port['HostPort'], container_port)
-                    for container_port, ports in data['NetworkSettings']['Ports'].iteritems()
-                    for port in (ports if ports else [])
-                ]
-
-            print '''CONTAINER:  %(container_name)s
-Id:         %(id)s
-Name:       %(name)s
-Command:    %(command)s
-Created:    %(created)s
-Started:    %(started)s
-IP address: %(ip_address)s
-Ports:      %(ports)s
-Volumes:    %(volumes)s
-            ''' % {
-                'container_name': self.name,
-                'id': container_id,
-                'name': data['Name'][1:],
-                'image': data['Image'],
-                'command': ' '.join(data['Config']['Cmd']),
-                'created': pretty_date(parse_datetime(data['Created'])),
-                'started': pretty_date(parse_datetime(data['State']['StartedAt'])),
-                'ip_address': data['NetworkSettings']['IPAddress'],
-                'ports': '\n            '.join(pretty_ports),
-                'volumes': '\n            '.join(pretty_volumes),
-            }
 
     def start(self, cmd=None, interactive=False):
         if self.is_running():
@@ -98,6 +36,12 @@ Volumes:    %(volumes)s
         container = self.start_without_depends(cmd, interactive=interactive)
 
         return container['Id']
+
+    def start_depends(self):
+        for container_name in self.config().get('depends_on', []):
+            container = Container(container_name)
+            if not container.is_running():
+                container.start()
 
     def start_without_depends(self, cmd=None, interactive=False):
         image = self.config()['image']
@@ -149,11 +93,67 @@ Volumes:    %(volumes)s
         self.stop()
         self.start()
 
-    def start_depends(self):
-        for container_name in self.config().get('depends_on', []):
-            container = Container(container_name)
-            if not container.is_running():
-                container.start()
+    def status(self):
+        if not self.is_running():
+            print('Container %s is not running' % self.name)
+        else:
+            container_id = self.get_runtime_id()
+            data = self.client().inspect_container(container_id)
+            pretty_volumes = []
+            pretty_ports = []
+
+            if data['Volumes']:
+                pretty_volumes = [
+                    '%s -> %s %s' % (host_dir, container_dir, '' if data['VolumesRW'][host_dir] else '[read-only]')
+                    for host_dir, container_dir in data['Volumes'].iteritems()
+                ]
+            if data['NetworkSettings'] and data['NetworkSettings']['Ports']:
+                pretty_ports = [
+                    '%s:%s -> %s' % (port['HostIp'] if port['HostIp'] else '0.0.0.0', port['HostPort'], container_port)
+                    for container_port, ports in data['NetworkSettings']['Ports'].iteritems()
+                    for port in (ports if ports else [])
+                ]
+
+            print '''CONTAINER:  %(container_name)s
+Id:         %(id)s
+Name:       %(name)s
+Command:    %(command)s
+Created:    %(created)s
+Started:    %(started)s
+IP address: %(ip_address)s
+Ports:      %(ports)s
+Volumes:    %(volumes)s
+            ''' % {
+                'container_name': self.name,
+                'id': container_id,
+                'name': data['Name'][1:],
+                'image': data['Image'],
+                'command': ' '.join(data['Config']['Cmd']),
+                'created': pretty_date(parse_datetime(data['Created'])),
+                'started': pretty_date(parse_datetime(data['State']['StartedAt'])),
+                'ip_address': data['NetworkSettings']['IPAddress'],
+                'ports': '\n            '.join(pretty_ports),
+                'volumes': '\n            '.join(pretty_volumes),
+            }
+
+    def client(self):
+        self._client = self._client or docker.Client()
+        return self._client
+
+    def config(self):
+        if self._config is None:
+            config_filename = '%s/%s.conf' % (self. DOCKER_CONTAINER_DIR, self.name)
+            with open(config_filename) as fd:
+                self._config = yaml.load(fd)
+        return self._config
+
+    def get_runtime_id(self):
+        container = self.get_running_container_by_image_name(self.name)
+
+        return container['Id'] if container else None
+
+    def is_running(self):
+        return self.get_running_container_by_image_name(self.name) is not None
 
     def matching_name(self, container, image_name):
         for name in container['Names']:
