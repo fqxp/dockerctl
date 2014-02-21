@@ -1,2 +1,2 @@
-git+git://github.com/dotcloud/docker-py.git
+docker-py==0.2.3
 pyaml>=13
