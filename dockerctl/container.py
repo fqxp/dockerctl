@@ -1,17 +1,15 @@
+from dockerctl.exceptions import ContainerException
 from dockerctl.name_generator import generate_name
 from dockerctl.utils import pretty_date, parse_datetime
 import docker
+import re
 import os
 import os.path
-import re
 import yaml
 
 
-class ContainerException(Exception):
-    pass
-
-
 class Container(object):
+    """ A `Container` represents a potential or running docker container """
 
     DOCKER_CONTAINER_DIR = '/etc/dockerctl'
 
@@ -28,8 +26,7 @@ class Container(object):
         self._config = None
 
     def client(self):
-        if self._client is None:
-            self._client = docker.Client()
+        self._client = self._client or docker.Client()
         return self._client
 
     def config(self):
@@ -40,26 +37,12 @@ class Container(object):
         return self._config
 
     def get_runtime_id(self):
-        container = self.get_container_by_name(self.name)
+        container = self.get_running_container_by_image_name(self.name)
 
         return container['Id'] if container else None
 
-    def get_container_by_name(self, name):
-        return self._get_container_and_name_by_name(name)[0]
-
-    def matching_name(self, name):
-        return self._get_container_and_name_by_name(name)[1]
-
     def is_running(self):
-        return self._get_container_and_name_by_name(self.name) is not None
-
-    def _get_container_and_name_by_name(self, name):
-        containers = self.client().containers()
-        for container in containers:
-            for n in container['Names']:
-                if re.match(r'^/%s-[a-zA-Z_]+$' % name, n):
-                    return container, n
-        return None
+        return self.get_running_container_by_image_name(self.name) is not None
 
     def status(self):
         if not self.is_running():
@@ -132,7 +115,8 @@ Volumes:    %(volumes)s
 
         links = {}
         for path, alias in self.config().get('links', {}).iteritems():
-            path_name = self.matching_name(path)
+            linked_container = self.get_running_container_by_image_name(path, running=True)
+            path_name = self.matching_name(linked_container, path)
             if path_name:
                 links[path_name] = alias
 
@@ -145,12 +129,12 @@ Volumes:    %(volumes)s
             volumes=volumes.values(),
             environment=environment,
             name=name)
-        import pprint
-        pprint.pprint(container)
-        pprint.pprint(volumes)
-        pprint.pprint(port_bindings)
-        pprint.pprint(links)
-        self.client().start(container, binds=volumes, port_bindings=port_bindings, links=links)
+
+        self.client().start(
+            container,
+            binds=volumes,
+            port_bindings=port_bindings,
+            links=links)
 
         return container
 
@@ -170,3 +154,23 @@ Volumes:    %(volumes)s
             container = Container(container_name)
             if not container.is_running():
                 container.start()
+
+    def matching_name(self, container, image_name):
+        for name in container['Names']:
+            mo = re.match(r'^/(.*)-[a-zA-Z_]+$', name)
+            if mo and mo.group(1) == image_name:
+                return name
+        return None
+
+    def get_containers_by_image_name(self, image_name, running=True):
+        containers = self.client().containers(all=not running)
+        return [container
+                for container in containers
+                if self.matching_name(container, image_name)]
+
+    def get_running_container_by_image_name(self, image_name):
+        containers_and_names = self.get_containers_by_image_name(image_name, running=True)
+        if len(containers_and_names) > 1:
+            raise ContainerException("More than one instance of container %s is running, which shouldn't happen" % image_name)
+
+        return containers_and_names[0] if len(containers_and_names) == 1 else None
