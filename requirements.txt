@@ -1,2 +1,2 @@
 docker-py==0.2.3
-pyaml>=13
+PyYAML==3.10

@@ -2,6 +2,10 @@
 
 from distutils.core import setup
 
+# TODO
+# - install python-dev libyaml-dev docker
+# - link virtualenv binary
+
 version = open('VERSION').read().strip()
 
 open('dockerctl/version.py', 'w').write('version = %s' % version)
