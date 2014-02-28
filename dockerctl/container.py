@@ -55,7 +55,7 @@ class Container(object):
 
         port_bindings = {}
         for port_mapping in self.config().get('ports', []):
-            port_bindings[port_mapping['container_port']] = port_mapping['host_port']
+            port_bindings[port_mapping['container_port']] = ('127.0.0.1', port_mapping['host_port'])
 
         links = {}
         for path, alias in self.config().get('links', {}).iteritems():
@@ -109,7 +109,7 @@ class Container(object):
                 ]
             if data['NetworkSettings'] and data['NetworkSettings']['Ports']:
                 pretty_ports = [
-                    '%s:%s -> %s' % (port['HostIp'] if port['HostIp'] else '0.0.0.0', port['HostPort'], container_port)
+                    '%s:%s -> %s' % (port['HostIp'] if port['HostIp'] else '*', port['HostPort'], container_port)
                     for container_port, ports in data['NetworkSettings']['Ports'].iteritems()
                     for port in (ports if ports else [])
                 ]
