@@ -60,7 +60,7 @@ if __name__ == '__main__':
                 print 'done'
         elif cmd == 'run':
             container_name = sys.argv[2]
-            cmd = sys.argv[3:] or ['/bin/bash']
+            cmd = ' '.join(sys.argv[3:]) or '/bin/bash'
             c = Container(container_name)
             c.start(cmd, interactive=True)
         elif cmd == 'status':
