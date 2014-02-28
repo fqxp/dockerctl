@@ -44,21 +44,22 @@ class Container(object):
                 container.start()
 
     def start_without_depends(self, cmd=None, interactive=False):
-        image = self.config()['image']
-        command = cmd or self.config().get('command')
-        environment = self.config().get('environment', {})
+        config = self.config()
+        image = config['image']
+        command = cmd or config.get('command')
+        environment = config.get('environment', {})
         name = '%s-%s' % (self.name, generate_name())
 
         volumes = {}
-        for volume in self.config().get('volumes', []):
+        for volume in config.get('volumes', []):
             volumes[volume['host_dir']] = volume['container_dir']
 
         port_bindings = {}
-        for port_mapping in self.config().get('ports', []):
+        for port_mapping in config.get('ports', []):
             port_bindings[port_mapping['container_port']] = ('127.0.0.1', port_mapping['host_port'])
 
         links = {}
-        for path, alias in self.config().get('links', {}).iteritems():
+        for path, alias in config.get('links', {}).iteritems():
             linked_container = self.get_running_container_by_image_name(path, running=True)
             path_name = self.matching_name(linked_container, path)
             if path_name:
