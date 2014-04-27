@@ -65,17 +65,9 @@ Example configuration file for the above webserver example:
 
 ## Building a Debian package
 
-You‘ll need the „Python to Debian source package conversion utility” stdeb:
+Change current working directory to project root and run
 
-    pip install stdeb
+    fakeroot dpkg-buildpackage -uc -us
 
-Then, you can create the Debian package like so:
-
-    ./setup.py --command-packages=stdeb.command sdist_dsc bdist_deb
-
-You can adjust the version in the file `VERSION` and the Debian package version
-in setup.cfg.
-
-After this, the package lies in `deb_dist` and you can install using `dpkg`:
-
-    dpkg -i deb_dist/dockerctl_0.1-1_all.deb
+After this, there should be a Debian package in the parent directory
+including the whole virtualenv.

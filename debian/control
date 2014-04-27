@@ -1,0 +1,12 @@
+Source: dockerctl
+Maintainer: Frank Ploss <dockerctl@fqxp.de>
+Section: python
+Priority: optional
+Build-Depends: python, debhelper (>= 9), dh-virtualenv
+Standards-Version: 3.9.5
+
+Package: dockerctl
+Architecture: all
+Depends: ${misc:Depends}, ${python:Depends}
+Description: A docker container management tool
+

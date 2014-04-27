@@ -1,9 +1,8 @@
-mediawiki/mediawiki-*.tar.gz
-ruby2.0/ruby-*.tar.gz
-righteye/
 deb_dist/
 build/
-*.deb
+dist/
+dockerctl.egg-info/
 *.pyc
 venv/
 TODO.md
+.ropeproject/

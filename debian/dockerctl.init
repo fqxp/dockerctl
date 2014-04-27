@@ -1,0 +1,51 @@
+#! /bin/sh
+### BEGIN INIT INFO
+# Provides:          dockerctl
+# Required-Start:    $remote_fs $syslog docker
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start dockerctl configured containers
+# Description:       Run dockerctl to start or stop containers defined in
+#                    /etc/dockerctl.
+### END INIT INFO
+
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+DOCKERCTL=/usr/bin/dockerctl
+DEFAULTS=/etc/default/dockerctl
+
+# Exit if the package is not installed
+[ -x "$DOCKERCTL" ] || exit 0
+
+# Read configuration variable file if it is present
+[ -r "$DEFAULTS" ] && . "$DEFAULTS"
+
+# Define LSB log_* functions.
+. /lib/lsb/init-functions
+
+
+case "$1" in
+  start)
+    log_begin_msg "Starting dockerctl containers ..."
+    $DOCKERCTL start
+    log_end_msg $?
+    ;;
+  stop)
+    log_begin_msg "Stopping dockerctl containers ..."
+    $DOCKERCTL stop
+    log_end_msg $?
+    ;;
+  restart|force-reload)
+    log_begin_msg "Restarting dockerctl containers ..."
+    $DOCKERCTL restart
+    log_end_msg $?
+    ;;
+  status)
+    $DOCKERCTL status
+    ;;
+  *)
+    echo "Usage: $SCRIPTNAME {start|stop|status|restart|force-reload}" >&2
+    exit 3
+    ;;
+esac
+
