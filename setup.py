@@ -18,7 +18,4 @@ setup(name='dockerctl',
       url='https://github.com/fqxp/dockerctl',
       packages=['dockerctl'],
       scripts=['bin/dockerctl'],
-      data_files=[
-          ('/usr/share/doc/dockerctl', ['README.md', 'doc/example.yml']),
-          ('/etc/dockerctl', ['etc/dockerctl/README']),
-      ])
+      )
