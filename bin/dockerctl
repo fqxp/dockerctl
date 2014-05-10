@@ -44,26 +44,26 @@ if __name__ == '__main__':
 
     try:
         if cmd == 'start':
-            for container_name in sys.argv[2:] or Container.available():
-                print 'Starting %s ...' % container_name,
-                c = Container(container_name, docker_client)
-                container_id = c.start()
-                print 'done [%s]' % container_id
+            container_name = sys.argv[2]
+            print 'Starting %s ...' % container_name,
+            c = Container(container_name, docker_client)
+            container_id = c.start()
+            print 'done [%s]' % container_id
         elif cmd == 'stop':
-            for container_name in sys.argv[2:] or Container.available():
-                c = Container(container_name, docker_client)
-                print 'Stopping %s ...' % container_name,
-                c.stop()
-                print 'done'
+            container_name = sys.argv[2]
+            c = Container(container_name, docker_client)
+            print 'Stopping %s ...' % container_name,
+            c.stop()
+            print 'done'
         elif cmd == 'restart':
-            for container_name in sys.argv[2:] or Container.available():
-                c = Container(container_name, docker_client)
-                print 'Stopping %s ...' % container_name,
-                c.stop()
-                print 'done'
-                print 'Starting %s ...' % container_name,
-                container_id = c.start()
-                print 'done'
+            container_name = sys.argv[2]
+            c = Container(container_name, docker_client)
+            print 'Stopping %s ...' % container_name,
+            c.stop()
+            print 'done'
+            print 'Starting %s ...' % container_name,
+            container_id = c.start()
+            print 'done'
         elif cmd == 'run':
             container_name = sys.argv[2]
             cmd = ' '.join(sys.argv[3:]) or '/bin/bash'
