@@ -71,3 +71,8 @@ Change current working directory to project root and run
 
 After this, there should be a Debian package in the parent directory
 including the whole virtualenv.
+
+## To do
+
+* prevent from giving same names twice
+* let user enable/disable containers
