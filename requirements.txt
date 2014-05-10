@@ -1,2 +1,2 @@
 PyYAML==3.10
-git+git://github.com/dotcloud/docker-py.git@0.3.0
+git+git://github.com/dotcloud/docker-py.git@0.3.1
