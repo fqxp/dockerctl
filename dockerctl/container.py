@@ -3,33 +3,20 @@ from dockerctl.exceptions import ContainerException
 from dockerctl.name_generator import generate_name
 from dockerctl.utils import pretty_date, parse_datetime
 import re
-import os
-import os.path
-import yaml
 
 
 class Container(object):
     """ A `Container` represents a potential or running docker container """
 
-    DOCKER_CONTAINER_DIR = '/etc/dockerctl'
-
-    def __init__(self, name, docker_client):
-        self.name = name
-        self._client = docker_client
-        self._config = None
-
-    @classmethod
-    def available(cls):
-        conf_files = filter(lambda fn: fn.endswith('.conf'), os.listdir(cls.DOCKER_CONTAINER_DIR))
-        names = map(lambda fn: fn[:-5], conf_files)
-
-        return names
+    def __init__(self, config, docker_client):
+        self.config = config
+        self.client = docker_client
 
     def start(self, cmd=None, interactive=False):
         if self.is_running():
             container_id = self.get_runtime_id()
             raise ContainerException('Cannot start container %s because it is already running with id %s' %
-                            (self.name, container_id))
+                            (self.config.name, container_id))
 
         self.start_depends()
 
@@ -38,37 +25,37 @@ class Container(object):
         return container['Id']
 
     def start_depends(self):
-        for container_name in self.config().get('depends_on', []):
-            container = Container(container_name)
+        for container_name in self.config.get('depends_on', []):
+            config = ContainerConfig(container_name)
+            container = Container(config)
             if not container.is_running():
                 container.start()
 
     def start_without_depends(self, cmd=None, interactive=False):
-        config = self.config()
-        image = config['image']
-        command = cmd or config.get('command')
-        environment = config.get('environment', {})
-        name = '%s-%s' % (self.name, generate_name())
+        image = self.config['image']
+        command = cmd or self.config.get('command')
+        environment = self.config.get('environment', {})
+        name = '%s-%s' % (self.config.name, generate_name())
 
         volumes = {}
-        for volume in config.get('volumes', []):
+        for volume in self.config.get('volumes', []):
             volumes[volume['host_dir']] = {
                 'bind': volume['container_dir'],
                 'ro': False
             }
 
         port_bindings = {}
-        for port_mapping in config.get('ports', []):
+        for port_mapping in self.config.get('ports', []):
             port_bindings[port_mapping['container_port']] = ('127.0.0.1', port_mapping['host_port'])
 
         links = {}
-        for path, alias in config.get('links', {}).iteritems():
+        for path, alias in self.config.get('links', {}).iteritems():
             linked_container = self.get_running_container_by_image_name(path)
             path_name = self.matching_name(linked_container, path)
             if path_name:
                 links[path_name] = alias
 
-        return self._client.run(
+        return self.client.run(
             image,
             detach=not interactive,
             stdin_open=interactive,
@@ -82,17 +69,17 @@ class Container(object):
 
     def stop(self):
         if not self.is_running():
-            raise ContainerException('Cannot stop container %s because it is not running' % self.name)
+            raise ContainerException('Cannot stop container %s because it is not running' % self.config.name)
 
         container_id = self.get_runtime_id()
-        self._client.stop(container_id)
+        self.client.stop(container_id)
 
     def status(self):
         if not self.is_running():
-            print('Container %s is not running' % self.name)
+            print('Container %s is not running' % self.config.name)
         else:
             container_id = self.get_runtime_id()
-            data = self._client.inspect_container(container_id)
+            data = self.client.inspect_container(container_id)
             pretty_volumes = []
             pretty_ports = []
 
@@ -118,7 +105,7 @@ class Container(object):
     Ports:      %(ports)s
     Volumes:    %(volumes)s
             ''' % {
-                'container_name': self.name,
+                'container_name': self.config.name,
                 'id': container_id,
                 'name': data['Name'][1:],
                 'image': data['Image'],
@@ -130,20 +117,13 @@ class Container(object):
                 'volumes': '\n            '.join(pretty_volumes),
             }
 
-    def config(self):
-        if self._config is None:
-            config_filename = '%s/%s.conf' % (self. DOCKER_CONTAINER_DIR, self.name)
-            with open(config_filename) as fd:
-                self._config = yaml.load(fd)
-        return self._config
-
     def get_runtime_id(self):
-        container = self.get_running_container_by_image_name(self.name)
+        container = self.get_running_container_by_image_name(self.config.name)
 
         return container['Id'] if container else None
 
     def is_running(self):
-        return self.get_running_container_by_image_name(self.name) is not None
+        return self.get_running_container_by_image_name(self.config.name) is not None
 
     def matching_name(self, container, image_name):
         for name in container['Names']:
@@ -153,7 +133,7 @@ class Container(object):
         return None
 
     def get_containers_by_image_name(self, image_name, running=True):
-        containers = self._client.containers(all=not running)
+        containers = self.client.containers(all=not running)
         return [container
                 for container in containers
                 if self.matching_name(container, image_name)]

@@ -2,6 +2,7 @@
 # vi: ft=python fileencoding=utf-8
 
 from dockerctl.container import Container, ContainerException
+from dockerctl.container_config import ContainerConfig
 from dockerctl.docker_py_client import DockerPyClient
 import subprocess
 import sys
@@ -44,34 +45,35 @@ if __name__ == '__main__':
 
     try:
         if cmd == 'start':
-            container_name = sys.argv[2]
-            print 'Starting %s ...' % container_name,
-            c = Container(container_name, docker_client)
+            config = ContainerConfig(sys.argv[2])
+            print 'Starting %s ...' % config.name,
+            c = Container(config, docker_client)
             container_id = c.start()
-            print 'done [%s]' % container_id
+            print 'done'
         elif cmd == 'stop':
-            container_name = sys.argv[2]
-            c = Container(container_name, docker_client)
-            print 'Stopping %s ...' % container_name,
+            config = ContainerConfig(sys.argv[2])
+            c = Container(config, docker_client)
+            print 'Stopping %s ...' % config.name,
             c.stop()
             print 'done'
         elif cmd == 'restart':
-            container_name = sys.argv[2]
-            c = Container(container_name, docker_client)
-            print 'Stopping %s ...' % container_name,
+            config = ContainerConfig(sys.argv[2])
+            c = Container(config, docker_client)
+            print 'Stopping %s ...' % config.name,
             c.stop()
             print 'done'
-            print 'Starting %s ...' % container_name,
+            print 'Starting %s ...' % config.name,
             container_id = c.start()
             print 'done'
         elif cmd == 'run':
-            container_name = sys.argv[2]
+            config = ContainerConfig(sys.argv[2])
             cmd = ' '.join(sys.argv[3:]) or '/bin/bash'
-            c = Container(container_name, docker_client)
+            c = Container(config, docker_client)
             c.start(cmd, interactive=True)
         elif cmd == 'status':
-            for container_name in sys.argv[2:] or Container.available():
-                c = Container(container_name, docker_client)
+            configs = map(lambda name: ContainerConfig(name), sys.argv[2:]) or ContainerConfig.available()
+            for config in configs:
+                c = Container(config, docker_client)
                 c.status()
     except ContainerException as e:
         print 'ERROR: %s' % e.message
