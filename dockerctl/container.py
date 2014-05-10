@@ -1,7 +1,7 @@
+from dockerctl.docker_py_client import DockerPyClient
 from dockerctl.exceptions import ContainerException
 from dockerctl.name_generator import generate_name
 from dockerctl.utils import pretty_date, parse_datetime
-import docker
 import re
 import os
 import os.path
@@ -13,9 +13,9 @@ class Container(object):
 
     DOCKER_CONTAINER_DIR = '/etc/dockerctl'
 
-    def __init__(self, name):
+    def __init__(self, name, docker_client):
         self.name = name
-        self._client = None
+        self._client = docker_client
         self._config = None
 
     @classmethod
@@ -52,7 +52,10 @@ class Container(object):
 
         volumes = {}
         for volume in config.get('volumes', []):
-            volumes[volume['host_dir']] = volume['container_dir']
+            volumes[volume['host_dir']] = {
+                'bind': volume['container_dir'],
+                'ro': False
+            }
 
         port_bindings = {}
         for port_mapping in config.get('ports', []):
@@ -65,41 +68,31 @@ class Container(object):
             if path_name:
                 links[path_name] = alias
 
-        container = self.client().create_container(
+        return self._client.run(
             image,
             detach=not interactive,
             stdin_open=interactive,
             tty=interactive,
             command=command,
-            volumes=volumes.values(),
             environment=environment,
-            name=name)
-
-        self.client().start(
-            container,
+            name=name,
             binds=volumes,
             port_bindings=port_bindings,
             links=links)
-
-        return container
 
     def stop(self):
         if not self.is_running():
             raise ContainerException('Cannot stop container %s because it is not running' % self.name)
 
         container_id = self.get_runtime_id()
-        self.client().stop(container_id)
-
-    def restart(self):
-        self.stop()
-        self.start()
+        self._client.stop(container_id)
 
     def status(self):
         if not self.is_running():
             print('Container %s is not running' % self.name)
         else:
             container_id = self.get_runtime_id()
-            data = self.client().inspect_container(container_id)
+            data = self._client.inspect_container(container_id)
             pretty_volumes = []
             pretty_ports = []
 
@@ -116,14 +109,14 @@ class Container(object):
                 ]
 
             print '''CONTAINER:  %(container_name)s
-Id:         %(id)s
-Name:       %(name)s
-Command:    %(command)s
-Created:    %(created)s
-Started:    %(started)s
-IP address: %(ip_address)s
-Ports:      %(ports)s
-Volumes:    %(volumes)s
+    Id:         %(id)s
+    Name:       %(name)s
+    Command:    %(command)s
+    Created:    %(created)s
+    Started:    %(started)s
+    IP address: %(ip_address)s
+    Ports:      %(ports)s
+    Volumes:    %(volumes)s
             ''' % {
                 'container_name': self.name,
                 'id': container_id,
@@ -136,10 +129,6 @@ Volumes:    %(volumes)s
                 'ports': '\n            '.join(pretty_ports),
                 'volumes': '\n            '.join(pretty_volumes),
             }
-
-    def client(self):
-        self._client = self._client or docker.Client()
-        return self._client
 
     def config(self):
         if self._config is None:
@@ -164,7 +153,7 @@ Volumes:    %(volumes)s
         return None
 
     def get_containers_by_image_name(self, image_name, running=True):
-        containers = self.client().containers(all=not running)
+        containers = self._client.containers(all=not running)
         return [container
                 for container in containers
                 if self.matching_name(container, image_name)]

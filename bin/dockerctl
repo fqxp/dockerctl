@@ -2,6 +2,7 @@
 # vi: ft=python fileencoding=utf-8
 
 from dockerctl.container import Container, ContainerException
+from dockerctl.docker_py_client import DockerPyClient
 import subprocess
 import sys
 try:
@@ -39,33 +40,38 @@ if __name__ == '__main__':
         print_help()
         sys.exit(1)
 
+    docker_client = DockerPyClient()
+
     try:
         if cmd == 'start':
             for container_name in sys.argv[2:] or Container.available():
                 print 'Starting %s ...' % container_name,
-                c = Container(container_name)
+                c = Container(container_name, docker_client)
                 container_id = c.start()
                 print 'done [%s]' % container_id
         elif cmd == 'stop':
             for container_name in sys.argv[2:] or Container.available():
-                c = Container(container_name)
+                c = Container(container_name, docker_client)
                 print 'Stopping %s ...' % container_name,
                 c.stop()
                 print 'done'
         elif cmd == 'restart':
             for container_name in sys.argv[2:] or Container.available():
-                c = Container(container_name)
-                print 'Restarting %s ...' % container_name,
-                c.restart()
+                c = Container(container_name, docker_client)
+                print 'Stopping %s ...' % container_name,
+                c.stop()
+                print 'done'
+                print 'Starting %s ...' % container_name,
+                container_id = c.start()
                 print 'done'
         elif cmd == 'run':
             container_name = sys.argv[2]
             cmd = ' '.join(sys.argv[3:]) or '/bin/bash'
-            c = Container(container_name)
+            c = Container(container_name, docker_client)
             c.start(cmd, interactive=True)
         elif cmd == 'status':
             for container_name in sys.argv[2:] or Container.available():
-                c = Container(container_name)
+                c = Container(container_name, docker_client)
                 c.status()
     except ContainerException as e:
         print 'ERROR: %s' % e.message
