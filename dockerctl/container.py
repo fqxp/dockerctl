@@ -60,7 +60,7 @@ class Container(object):
 
         links = {}
         for path, alias in config.get('links', {}).iteritems():
-            linked_container = self.get_running_container_by_image_name(path, running=True)
+            linked_container = self.get_running_container_by_image_name(path)
             path_name = self.matching_name(linked_container, path)
             if path_name:
                 links[path_name] = alias
