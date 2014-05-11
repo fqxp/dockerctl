@@ -4,12 +4,18 @@
 from dockerctl.container import Container, ContainerException
 from dockerctl.container_config import ContainerConfig
 from dockerctl.docker_py_client import DockerPyClient
+from dockerctl.docker_cmdline_client import DockerCmdlineClient
+import logging
 import subprocess
 import sys
 try:
     from dockerctl.version import version
 except ImportError:
     version = 'DEV'
+
+logging.basicConfig()
+logger = logging.getLogger(format='[%(level)s] %(message)s')
+logger.setLevel(logging.INFO)
 
 
 def print_help():
@@ -41,7 +47,8 @@ if __name__ == '__main__':
         print_help()
         sys.exit(1)
 
-    docker_client = DockerPyClient()
+    docker_client = DockerCmdlineClient()
+    #docker_client = DockerPyClient()
 
     try:
         if cmd == 'start':

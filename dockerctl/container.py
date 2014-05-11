@@ -1,8 +1,12 @@
+from dockerctl.container_config import ContainerConfig
 from dockerctl.docker_py_client import DockerPyClient
 from dockerctl.exceptions import ContainerException
 from dockerctl.name_generator import generate_name
 from dockerctl.utils import pretty_date, parse_datetime
+import logging
 import re
+
+logger = logging.getLogger(__name__)
 
 
 class Container(object):
@@ -20,22 +24,24 @@ class Container(object):
 
         self.start_depends()
 
-        container = self.start_without_depends(cmd, interactive=interactive)
+        container_id = self.start_without_depends(cmd, interactive=interactive)
 
-        return container['Id']
+        return container_id
 
     def start_depends(self):
         for container_name in self.config.get('depends_on', []):
             config = ContainerConfig(container_name)
-            container = Container(config)
+            container = Container(config, self.client)
             if not container.is_running():
                 container.start()
 
     def start_without_depends(self, cmd=None, interactive=False):
         image = self.config['image']
-        command = cmd or self.config.get('command')
+        command = cmd or self.config.get('command') or self.config.get('args')
         environment = self.config.get('environment', {})
         name = '%s-%s' % (self.config.name, generate_name())
+
+        logger.info('Starting container %s' % name)
 
         volumes = {}
         for volume in self.config.get('volumes', []):
@@ -58,7 +64,6 @@ class Container(object):
         return self.client.run(
             image,
             detach=not interactive,
-            stdin_open=interactive,
             tty=interactive,
             command=command,
             environment=environment,
@@ -113,8 +118,8 @@ class Container(object):
                 'created': pretty_date(parse_datetime(data['Created'])),
                 'started': pretty_date(parse_datetime(data['State']['StartedAt'])),
                 'ip_address': data['NetworkSettings']['IPAddress'],
-                'ports': '\n            '.join(pretty_ports),
-                'volumes': '\n            '.join(pretty_volumes),
+                'ports': '\n                '.join(pretty_ports),
+                'volumes': '\n                '.join(pretty_volumes),
             }
 
     def get_runtime_id(self):
@@ -125,22 +130,23 @@ class Container(object):
     def is_running(self):
         return self.get_running_container_by_image_name(self.config.name) is not None
 
-    def matching_name(self, container, image_name):
-        for name in container['Names']:
-            mo = re.match(r'^/(.*)-[a-zA-Z_]+$', name)
-            if mo and mo.group(1) == image_name:
-                return name
-        return None
-
-    def get_containers_by_image_name(self, image_name, running=True):
-        containers = self.client.containers(all=not running)
-        return [container
-                for container in containers
-                if self.matching_name(container, image_name)]
-
     def get_running_container_by_image_name(self, image_name):
-        containers_and_names = self.get_containers_by_image_name(image_name, running=True)
+        containers_and_names = self.get_containers_by_image_name(image_name)
         if len(containers_and_names) > 1:
             raise ContainerException("More than one instance of container %s is running, which shouldn't happen" % image_name)
 
         return containers_and_names[0] if len(containers_and_names) == 1 else None
+
+    def get_containers_by_image_name(self, image_name):
+        containers = self.client.containers(all=False)
+        return [container
+                for container in containers
+                if self.matching_name(container, image_name)]
+
+    def matching_name(self, container, image_name):
+        for name in container['Names']:
+            mo = re.match(r'^/?(.*)-[a-zA-Z_]+$', name)
+            if mo and mo.group(1) == image_name:
+                return name
+
+        return None

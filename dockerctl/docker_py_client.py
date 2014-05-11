@@ -15,7 +15,7 @@ class DockerPyClient:
         container = self._client.create_container(
             image,
             detach=detach,
-            stdin_open=stdin_open,
+            stdin_open=tty,
             tty=tty,
             command=command,
             volumes=[bind['bind'] for bind in binds.values()],
@@ -28,7 +28,7 @@ class DockerPyClient:
             port_bindings=port_bindings,
             links=links)
 
-        return container
+        return container['Id']
 
     def stop(self, container_id):
         self._client.stop(container_id)
