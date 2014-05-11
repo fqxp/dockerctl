@@ -5,6 +5,7 @@ from dockerctl.container import Container, ContainerException
 from dockerctl.container_config import ContainerConfig
 from dockerctl.docker_py_client import DockerPyClient
 from dockerctl.docker_cmdline_client import DockerCmdlineClient
+import argparse
 import logging
 import subprocess
 import sys
@@ -13,77 +14,66 @@ try:
 except ImportError:
     version = 'DEV'
 
-logging.basicConfig()
-logger = logging.getLogger(format='[%(level)s] %(message)s')
+logging.basicConfig(format='[%(levelname)s] %(message)s')
+logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-
-def print_help():
-    print """\
-USAGE: %s COMMAND [CONTAINER ...]
-
-A manager for docker containers.
-
-where COMMAND is one of:
+cmd_help = '''
     start       start container(s)
     stop        stop container(s)
     restart     restart container(s)
     status      show status of container(s)
     shell       start a shell in the container
-    help        show this help message
-
-This is dockerctl version %s. See https://github.com/fqxp/dockerfiles for source code.
-    """ % (sys.argv[0], version)
+    help        show this help message'''
 
 if __name__ == '__main__':
-    cmd = sys.argv[1] if len(sys.argv) > 1 else ''
+    parser = argparse.ArgumentParser(
+        description='Control configured Docker containers.',
+        epilog='This is dockerctl version %s. See https://github.com/fqxp/dockerfiles for more info.' % version)
+    parser.add_argument('-d', '--debug', action='store_true', help='Enable debugging')
+    parser.add_argument('-C', '--use-cmdline-client', action='store_true', help='User docker command instead of API directly')
+    parser.add_argument('-c', '--container-command', nargs=1, help='command to run in container')
+    parser.add_argument('command', nargs=1, help=cmd_help, choices=['start', 'stop', 'restart', 'status', 'run'])
+    parser.add_argument('container', nargs='?', help='dockerctl container name')
 
-    if cmd == 'help':
-        print_help()
-        sys.exit(0)
-    elif cmd not in ('start', 'stop', 'restart', 'run', 'status'):
-        print 'Unknown command ’%s’' % cmd
-        print
-        print_help()
-        sys.exit(1)
+    args = parser.parse_args()
 
-    docker_client = DockerCmdlineClient()
-    #docker_client = DockerPyClient()
+    if args.debug:
+        logger.setLevel(logging.DEBUG)
+
+    docker_client = DockerCmdlineClient() if args.use_cmdline_client else DockerPyClient()
+    container = None
+    if args.container:
+        config = ContainerConfig(args.container)
+        container = Container(config, docker_client)
+
+    cmd = args.command[0]
 
     try:
         if cmd == 'start':
-            config = ContainerConfig(sys.argv[2])
-            print 'Starting %s ...' % config.name,
-            c = Container(config, docker_client)
-            container_id = c.start()
-            print 'done'
+            logger.info('Starting %s' % config.name)
+            container_id = container.start()
         elif cmd == 'stop':
-            config = ContainerConfig(sys.argv[2])
-            c = Container(config, docker_client)
-            print 'Stopping %s ...' % config.name,
-            c.stop()
-            print 'done'
+            logger.info('Stopping %s' % config.name)
+            container.stop()
         elif cmd == 'restart':
-            config = ContainerConfig(sys.argv[2])
-            c = Container(config, docker_client)
-            print 'Stopping %s ...' % config.name,
-            c.stop()
-            print 'done'
-            print 'Starting %s ...' % config.name,
-            container_id = c.start()
-            print 'done'
+            logger.info('Stopping %s ...' % config.name)
+            container.stop()
+            logger.info('Starting %s ...' % config.name)
+            container_id = container.start()
         elif cmd == 'run':
-            config = ContainerConfig(sys.argv[2])
-            cmd = ' '.join(sys.argv[3:]) or '/bin/bash'
-            c = Container(config, docker_client)
-            c.start(cmd, interactive=True)
+            container_cmd = args.container_command or '/bin/bash'
+            logger.info('Starting %s with command %s' % (config.name, container_cmd))
+            container.start(container_cmd, interactive=True)
         elif cmd == 'status':
             configs = map(lambda name: ContainerConfig(name), sys.argv[2:]) or ContainerConfig.available()
             for config in configs:
-                c = Container(config, docker_client)
-                c.status()
+                container = Container(config, docker_client)
+                container.status()
+
     except ContainerException as e:
-        print 'ERROR: %s' % e.message
+        logger.error(e.message)
+        sys.exit(1)
     except subprocess.CalledProcessError as e:
-        print 'Subprocess %s failed with %d' % (e.cmd, e.returncode)
+        logger.error('Subprocess %s failed with %d' % (e.cmd, e.returncode))
         sys.exit(2)

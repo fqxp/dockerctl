@@ -41,8 +41,6 @@ class Container(object):
         environment = self.config.get('environment', {})
         name = '%s-%s' % (self.config.name, generate_name())
 
-        logger.info('Starting container %s' % name)
-
         volumes = {}
         for volume in self.config.get('volumes', []):
             volumes[volume['host_dir']] = {
@@ -61,7 +59,7 @@ class Container(object):
             if path_name:
                 links[path_name] = alias
 
-        return self.client.run(
+        container_id = self.client.run(
             image,
             detach=not interactive,
             tty=interactive,
@@ -72,6 +70,10 @@ class Container(object):
             port_bindings=port_bindings,
             links=links)
 
+        logger.info('Started container %s with id %s' % (name, container_id))
+
+        return container_id
+
     def stop(self):
         if not self.is_running():
             raise ContainerException('Cannot stop container %s because it is not running' % self.config.name)
@@ -81,7 +83,7 @@ class Container(object):
 
     def status(self):
         if not self.is_running():
-            print('Container %s is not running' % self.config.name)
+            print('Container %s is not running\n' % self.config.name)
         else:
             container_id = self.get_runtime_id()
             data = self.client.inspect_container(container_id)
@@ -100,26 +102,27 @@ class Container(object):
                     for port in (ports if ports else [])
                 ]
 
-            print '''CONTAINER:  %(container_name)s
-    Id:         %(id)s
-    Name:       %(name)s
-    Command:    %(command)s
-    Created:    %(created)s
-    Started:    %(started)s
-    IP address: %(ip_address)s
-    Ports:      %(ports)s
-    Volumes:    %(volumes)s
+            print '''\
+Container:  %(container_name)s
+Id:         %(id)s
+Name:       %(name)s
+Command:    %(command)s
+Created:    %(created)s
+Started:    %(started)s
+IP address: %(ip_address)s
+Ports:      %(ports)s
+Volumes:    %(volumes)s
             ''' % {
                 'container_name': self.config.name,
                 'id': container_id,
                 'name': data['Name'][1:],
                 'image': data['Image'],
-                'command': ' '.join(data['Config']['Cmd']),
+                'command': '%s %s' % (data['Path'], ' '.join(data['Args'])),
                 'created': pretty_date(parse_datetime(data['Created'])),
                 'started': pretty_date(parse_datetime(data['State']['StartedAt'])),
                 'ip_address': data['NetworkSettings']['IPAddress'],
-                'ports': '\n                '.join(pretty_ports),
-                'volumes': '\n                '.join(pretty_volumes),
+                'ports': '\n            '.join(pretty_ports),
+                'volumes': '\n            '.join(pretty_volumes),
             }
 
     def get_runtime_id(self):
