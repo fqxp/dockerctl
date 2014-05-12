@@ -66,8 +66,7 @@ if __name__ == '__main__':
             logger.info('Starting %s with command %s' % (config.name, container_cmd))
             container.start(container_cmd, interactive=True)
         elif cmd == 'status':
-            configs = map(lambda name: ContainerConfig(name), sys.argv[2:]) or ContainerConfig.available()
-            for config in configs:
+            for config in ContainerConfig.available():
                 container = Container(config, docker_client)
                 container.status()
 
