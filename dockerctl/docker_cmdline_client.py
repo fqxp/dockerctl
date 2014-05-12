@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import subprocess
 
 
@@ -28,16 +29,23 @@ class DockerCmdlineClient:
         if all:
             cmd.append('-a')
         output = self._run_cmd(cmd)
-        lines = output.splitlines()[1:]
-        containers = []
-        for line in lines:
-            words = line.split()
-            containers.append({
-                'Id': words[0],
-                'Image': words[1],
-                'Names': words[-1].split(','),
-            })
-        return containers
+        lines = self._parse_containers_output(output)
+        return [
+            {
+                'Command': line[2],
+                'Id':      line[0],
+                'Image':   line[1],
+                'Names':   line[-1].split(','),
+                'Status':  'EXITED' if line[4].startswith('Exited') else 'RUNNING'
+            }
+            for line in lines
+        ]
+
+    def _parse_containers_output(self, output):
+        return [
+            re.sub(r'\s{3,}', '   ', line).strip().split('   ')
+            for line in output.splitlines()[1:]
+        ]
 
     def run(self, image, detach=False, tty=False,
             command=None, environment=None, name=None,
@@ -80,3 +88,5 @@ class DockerCmdlineClient:
         output = self._run_cmd([self.DOCKER, 'inspect', container_id])
         return json.loads(output)[0]
 
+    def remove_container(self, container_id):
+        self._run_cmd([self.DOCKER, 'rm', container_id])

@@ -22,6 +22,7 @@ class Container(object):
             raise ContainerException('Cannot start container %s because it is already running with id %s' %
                             (self.config.name, container_id))
 
+        self.remove_exited_containers()
         self.start_depends()
 
         container_id = self.start_without_depends(cmd, interactive=interactive)
@@ -73,6 +74,16 @@ class Container(object):
         logger.info('Started container %s with id %s' % (name, container_id))
 
         return container_id
+
+    def remove_exited_containers(self):
+        containers = self.get_containers_by_image_name(self.config.name, only_running=False)
+        exited_containers = filter(
+            lambda c: c['Status'] == 'EXITED',
+            containers
+        )
+        for container in exited_containers:
+            logger.info('Removing exited %s container %s' % (self.config.name, container['Id']))
+            self.client.remove_container(container['Id'])
 
     def stop(self):
         if not self.is_running():
@@ -140,15 +151,15 @@ Volumes:    %(volumes)s
 
         return containers_and_names[0] if len(containers_and_names) == 1 else None
 
-    def get_containers_by_image_name(self, image_name):
-        containers = self.client.containers(all=False)
+    def get_containers_by_image_name(self, image_name, only_running=True):
+        containers = self.client.containers(all=not only_running)
         return [container
                 for container in containers
                 if self.matching_name(container, image_name)]
 
     def matching_name(self, container, image_name):
         for name in container['Names']:
-            mo = re.match(r'^/?(.*)-[a-zA-Z_]+$', name)
+            mo = re.match(r'^/?(.*)-[a-zA-Z0-9_]+$', name)
             if mo and mo.group(1) == image_name:
                 return name
 

@@ -7,7 +7,18 @@ class DockerPyClient:
         self._client = docker.Client()
 
     def containers(self, all=False):
-        return self._client.containers(all=all)
+        containers = self._client.containers(all=all)
+
+        return [
+            {
+                'Command': container['Command'],
+                'Id':      container['Id'],
+                'Image':   container['Image'],
+                'Names':   container['Names'],
+                'Status':  'EXITED' if container['Status'].startswith('Exited') else 'RUNNING',
+            }
+            for container in containers
+        ]
 
     def run(self, image, detach=False, stdin_open=False, tty=False,
             command=None, environment=None, name=None,
@@ -35,3 +46,6 @@ class DockerPyClient:
 
     def inspect_container(self, container_id):
         return self._client.inspect_container(container_id)
+
+    def remove_container(self, container_id):
+        return self._client.remove_container(container_id)
