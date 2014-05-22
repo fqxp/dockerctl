@@ -13,6 +13,7 @@
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DOCKERCTL=/usr/bin/dockerctl
 DEFAULTS=/etc/default/dockerctl
+CONTAINER_DIR=/etc/dockerctl
 
 # Exit if the package is not installed
 [ -x "$DOCKERCTL" ] || exit 0
@@ -23,21 +24,40 @@ DEFAULTS=/etc/default/dockerctl
 # Define LSB log_* functions.
 . /lib/lsb/init-functions
 
+function start_containers() {
+  for conf_file in $(find $CONTAINER_DIR -name '*.conf'); do
+    base_conf_file=$(basename $conf_file)
+    container_name=${base_conf_file%%.conf}
+
+    log_progress_msg "$container_name"
+    $DOCKERCTL start $container_name
+  done
+}
+
+function stop_containers() {
+  for container_name in $($DOCKERCTL status | awk '/^Container:/ { print $2; }'); do
+    log_progress_msg "$container_name"
+    $DOCKERCTL stop $container_name
+  done
+}
+
 
 case "$1" in
   start)
-    log_begin_msg "Starting dockerctl containers ..."
-    $DOCKERCTL start
+    log_begin_msg "Starting dockerctl containers"
+    start_containers
     log_end_msg $?
     ;;
   stop)
-    log_begin_msg "Stopping dockerctl containers ..."
-    $DOCKERCTL stop
+    log_begin_msg "Stopping dockerctl containers"
+    stop_containers
     log_end_msg $?
     ;;
   restart|force-reload)
-    log_begin_msg "Restarting dockerctl containers ..."
-    $DOCKERCTL restart
+    log_begin_msg "Stopping dockerctl containers"
+    stop_containers
+    log_begin_msg "Starting dockerctl containers"
+    start_containers
     log_end_msg $?
     ;;
   status)
