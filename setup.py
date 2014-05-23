@@ -8,7 +8,7 @@ from setuptools import setup
 
 version = open('VERSION').read().strip()
 
-open('dockerctl/version.py', 'w').write('version = %s' % version)
+open('dockerctl/version.py', 'w').write("version = '%s'" % version)
 
 setup(name='dockerctl',
       version=version,

@@ -6,3 +6,6 @@ dockerctl.egg-info/
 venv/
 TODO.md
 .ropeproject/
+debian/dockerctl.debhelper.log
+debian/files
+debian/dockerctl/
