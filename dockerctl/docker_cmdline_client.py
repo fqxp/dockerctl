@@ -1,3 +1,4 @@
+from dockerctl.exceptions import ClientException
 import json
 import logging
 import re
@@ -18,8 +19,8 @@ class DockerCmdlineClient:
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         (output, _) = process.communicate()
         if process.returncode != 0:
-            logger.error('Command failed (%d): %s' % (process.returncode, output))
-            raise Exception('Command failed (%d): %s' % (process.returncode, output))
+            logger.warn('Command failed (%d): %s' % (process.returncode, output))
+            raise ClientException('Command failed (%d): %s' % (process.returncode, output))
         else:
             logger.debug('Return code %d' % process.returncode)
         return output

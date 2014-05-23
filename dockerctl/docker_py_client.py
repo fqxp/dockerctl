@@ -1,3 +1,4 @@
+from dockerctl.exceptions import ClientException
 import docker
 
 
@@ -20,7 +21,7 @@ class DockerPyClient:
             for container in containers
         ]
 
-    def run(self, image, detach=False, stdin_open=False, tty=False,
+    def run(self, image, detach=False, tty=False,
             command=None, environment=None, name=None,
             binds=None, port_bindings=None, links=None):
         container = self._client.create_container(
@@ -48,4 +49,7 @@ class DockerPyClient:
         return self._client.inspect_container(container_id)
 
     def remove_container(self, container_id):
-        return self._client.remove_container(container_id)
+        try:
+            return self._client.remove_container(container_id)
+        except docker.errors.APIError as ex:
+            raise ClientException('API error while removing container %s' % container_id, ex)

@@ -1,6 +1,6 @@
 from dockerctl.container_config import ContainerConfig
 from dockerctl.docker_py_client import DockerPyClient
-from dockerctl.exceptions import ContainerException
+from dockerctl.exceptions import ContainerException, ClientException
 from dockerctl.name_generator import generate_name
 from dockerctl.utils import pretty_date, parse_datetime
 import logging
@@ -83,7 +83,10 @@ class Container(object):
         )
         for container in exited_containers:
             logger.info('Removing exited %s container %s' % (self.config.name, container['Id']))
-            self.client.remove_container(container['Id'])
+            try:
+                self.client.remove_container(container['Id'])
+            except ClientException as ex:
+                logger.warn('Could not remove container %s: %s' % (container['Id'], ex))
 
     def stop(self):
         if not self.is_running():
