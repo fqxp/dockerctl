@@ -19,10 +19,11 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 cmd_help = '''
-    start       start container(s)
-    stop        stop container(s)
-    restart     restart container(s)
-    status      show status of container(s)
+    start       start container
+    stop        stop container
+    restart     restart container
+    status      show status of container
+    logs        show logs of container
     shell       start a shell in the container
     help        show this help message'''
 
@@ -33,7 +34,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--debug', action='store_true', help='Enable debugging')
     parser.add_argument('-C', '--use-cmdline-client', action='store_true', help='User docker command instead of API directly')
     parser.add_argument('-c', '--container-command', nargs=1, help='command to run in container')
-    parser.add_argument('command', nargs=1, help=cmd_help, choices=['start', 'stop', 'restart', 'status', 'run'])
+    parser.add_argument('command', nargs=1, help=cmd_help, choices=['start', 'stop', 'restart', 'status', 'logs', 'run'])
     parser.add_argument('container', nargs='?', help='dockerctl container name')
 
     args = parser.parse_args()
@@ -65,6 +66,8 @@ if __name__ == '__main__':
             container_cmd = args.container_command or '/bin/bash'
             logger.info('Starting %s with command %s' % (config.name, container_cmd))
             container.start(container_cmd, interactive=True)
+        elif cmd == 'logs':
+            print container.logs()
         elif cmd == 'status':
             for config in ContainerConfig.available():
                 container = Container(config, docker_client)

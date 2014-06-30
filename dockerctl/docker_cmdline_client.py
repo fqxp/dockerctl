@@ -85,6 +85,9 @@ class DockerCmdlineClient:
     def stop(self, container_id):
         self._run_cmd([self.DOCKER, 'stop', container_id])
 
+    def logs(self, container_id):
+        return self._run_cmd([self.DOCKER, 'logs', container_id])
+
     def inspect_container(self, container_id):
         output = self._run_cmd([self.DOCKER, 'inspect', container_id])
         return json.loads(output)[0]

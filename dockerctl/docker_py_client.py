@@ -45,6 +45,9 @@ class DockerPyClient:
     def stop(self, container_id):
         self._client.stop(container_id)
 
+    def logs(self, container_id):
+        return self._client.logs(container_id)
+
     def inspect_container(self, container_id):
         return self._client.inspect_container(container_id)
 

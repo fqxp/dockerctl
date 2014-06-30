@@ -95,6 +95,10 @@ class Container(object):
         container_id = self.get_runtime_id()
         self.client.stop(container_id)
 
+    def logs(self):
+        container_id = self.get_runtime_id()
+        print self.client.logs(container_id)
+
     def status(self):
         if not self.is_running():
             print('Container %s is not running\n' % self.config.name)
