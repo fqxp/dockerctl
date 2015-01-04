@@ -76,3 +76,11 @@ including the whole virtualenv.
 
 * prevent from giving same names twice
 * let user enable/disable containers
+* restart: don't fail when container is running
+* auto-pull: pull image before starting container, based on config variable
+* dry-run: don't actually run command, just print what would've been run
+* use an automatic base dir (e.g., /srv/CONTAINER-NAME) and enable
+  relative paths in config file
+* use a per-container fab-file or similar to set up host volumes
+  (especially permissions)
+

@@ -1,10 +1,12 @@
-dockerctl (0.1.1) UNRELEASED; urgency=low
+dockerctl (0.2) UNRELEASED; urgency=low
 
   * Fix linking containers
   * Add possibility to choose between backends (docker-py or docker command
     line client)
+  * 0.2
+  * Add logs command
 
- -- frank <dockerctl@fqxp.de>  Fri, 23 May 2014 18:27:38 +0200
+ -- frank <dockerctl@fqxp.de>  Mon, 30 Jun 2014 20:16:47 +0200
 
 dockerctl (0.1-1) UNRELEASED; urgency=low
 

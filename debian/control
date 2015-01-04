@@ -7,6 +7,6 @@ Standards-Version: 3.9.5
 
 Package: dockerctl
 Architecture: all
-Depends: ${misc:Depends}, ${python:Depends}
+Depends: ${misc:Depends}, ${python:Depends}, lxc-docker
 Description: A docker container management tool
 
