@@ -85,6 +85,9 @@ class DockerCmdlineClient:
     def stop(self, container_id):
         self._run_cmd([self.DOCKER, 'stop', container_id])
 
+    def pull(self, image):
+        self._run_cmd([self.DOCKER, 'pull', image])
+
     def logs(self, container_id):
         return self._run_cmd([self.DOCKER, 'logs', container_id])
 

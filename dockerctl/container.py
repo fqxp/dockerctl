@@ -23,6 +23,8 @@ class Container(object):
                             (self.config.name, container_id))
 
         self.remove_exited_containers()
+        if self.config.get('autopull', False):
+            self.pull()
         self.start_depends()
 
         container_id = self.start_without_depends(cmd, interactive=interactive)
@@ -94,6 +96,10 @@ class Container(object):
 
         container_id = self.get_runtime_id()
         self.client.stop(container_id)
+
+    def pull(self):
+        image = self.config['image']
+        self.client.pull(image)
 
     def logs(self):
         container_id = self.get_runtime_id()

@@ -47,3 +47,8 @@ def pretty_date(time=False):
 def parse_datetime(s):
     return datetime.datetime(*map(int, re.split('[^\d]', s)[:-2]))
 
+def split_image_and_tag(image_and_tag):
+    image, _, tag = image_and_tag.partition(':')
+    if not tag:
+        tag = 'latest'
+    return image, tag

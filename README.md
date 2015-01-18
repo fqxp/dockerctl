@@ -51,6 +51,7 @@ To stop a container, use:
 Example configuration file for the above webserver example:
 
     image: apache2
+    autopull: true
     ports:
     -
         container_port: 80
@@ -62,6 +63,9 @@ Example configuration file for the above webserver example:
     -
         container_dir: /var/log/apache2
         host_dir: /srv/webserver/log
+
+Set `autopull` to true if you want dockerctl to automatically pull the image
+before starting it. Default: false.
 
 ## Building a Debian package
 

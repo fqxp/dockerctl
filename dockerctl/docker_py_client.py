@@ -1,6 +1,10 @@
 from dockerctl.exceptions import ClientException
+from dockerctl.utils import split_image_and_tag
 import docker
+import json
+import logging
 
+logger = logging.getLogger(__name__)
 
 class DockerPyClient:
 
@@ -44,6 +48,14 @@ class DockerPyClient:
 
     def stop(self, container_id):
         self._client.stop(container_id)
+
+    def pull(self, image):
+        image, tag = split_image_and_tag(image)
+        for msg in self._client.pull(image, tag=tag, stream=True):
+            json_msg = json.loads(msg)
+            progress = '%s ' % json_msg['progress'] if json_msg.has_key('progress') else ''
+            status = json_msg.get('status', '')
+            logger.info('%s%s' % (progress, status))
 
     def logs(self, container_id):
         return self._client.logs(container_id)

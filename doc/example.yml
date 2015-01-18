@@ -1,4 +1,5 @@
 image: fqxp/apache2
+autopull: true
 ports:
   -
     container_port: 80
