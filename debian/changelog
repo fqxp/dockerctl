@@ -1,9 +1,14 @@
+dockerctl (0.3) UNRELEASED; urgency=low
+
+  * Add pull command
+
+ -- frank <dockerctl@fqxp.de>  Sun, 18 Jan 2015 15:51:47 +0200
+
 dockerctl (0.2) UNRELEASED; urgency=low
 
   * Fix linking containers
   * Add possibility to choose between backends (docker-py or docker command
     line client)
-  * 0.2
   * Add logs command
 
  -- frank <dockerctl@fqxp.de>  Mon, 30 Jun 2014 20:16:47 +0200
