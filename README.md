@@ -69,6 +69,10 @@ before starting it. Default: false.
 
 ## Building a Debian package
 
+Install dependencies:
+
+    sudo apt-get install dh-virtualenv debhelper
+
 Change current working directory to project root and run
 
     fakeroot dpkg-buildpackage -uc -us
